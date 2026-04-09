@@ -16,7 +16,9 @@ Kick-code es una plataforma de aprendizaje de programación diseñada para ayuda
 - **[CasosUsos.md:](docs/CasosUsos.md)** Contiene los casos de uso del sistema.
 
 - **[architectura.jpeg:](docs/Arquitectura.jpeg)** Contiene la arquitectura del sistema.
+![Imagen de Arquitectura](docs/Arquitectura.jpeg)
 
 - **[diagrama.png:](docs/Diagrama.png)** Contiene el diagrama de clases del sistema.
+![Imagen del Diagrama](docs/Diagrama.png)
 
 - **[Grupo3_SRS.pdf:](docs/Grupo3_SRS_Primercorte_IS1.pdf)** Contiene lo que hemos avanzado hasta el momento lo subi como PDF porque no pude subirlo como archivo word ya que se van realizar mas cambios y algunos cambios que no se veran reflejados en el PDF funcional.
