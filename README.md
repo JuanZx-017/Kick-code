@@ -13,10 +13,10 @@ Kick-code es una plataforma de aprendizaje de programación diseñada para ayuda
 **Contenido de la carpeta docs:**
 - **[Requerimientos.md:](docs/Requeremientos.md)** Contiene los requerimientos funcionales del sistema.
 
-- **CasosUsos.md:** Contiene los casos de uso del sistema.
+- **[CasosUsos.md:](docs/CasosUsos.md)** Contiene los casos de uso del sistema.
 
-- **architectura.jpeg:** Contiene la arquitectura del sistema.
+- **[architectura.jpeg:](docs/Arquitectura.jpeg)** Contiene la arquitectura del sistema.
 
-- **diagrama.png:** Contiene el diagrama de clases del sistema.
+- **[diagrama.png:](docs/Diagrama.png)** Contiene el diagrama de clases del sistema.
 
-- **Grupo3_SRS.pdf:** Contiene lo que hemos avanzado hasta el momento lo subi como PDF porque no pude subirlo como archivo word ya que se van realizar mas cambios y algunos cambios que no se veran reflejados en el PDF funcional.
+- **[Grupo3_SRS.pdf:](docs/Grupo3_SRS_Primercorte_IS1.pdf)** Contiene lo que hemos avanzado hasta el momento lo subi como PDF porque no pude subirlo como archivo word ya que se van realizar mas cambios y algunos cambios que no se veran reflejados en el PDF funcional.
