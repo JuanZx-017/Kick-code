@@ -21,4 +21,4 @@ Kick-code es una plataforma de aprendizaje de programación diseñada para ayuda
 - **[diagrama.png:](docs/diagrama.png)** Contiene el diagrama de clases del sistema.
 ![Imagen del diagrama](docs/diagrama.png)
 
-- **[Grupo3_SRS.pdf:](docs/Grupo3_SRS_Archivofinal.pdf)** Contiene lo que hemos avanzado hasta el momento lo subi como PDF porque no pude subirlo como archivo word ya que se van realizar mas cambios y algunos cambios que no se veran reflejados en el PDF funcional.
+- **[Grupo3_SRS_Archivofinal.pdf:](docs/Grupo3_SRS_Archivofinal.pdf)** Contiene nuestro Archivo final con toda la informacion del proyecto Kick-code.l.
