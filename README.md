@@ -3,10 +3,9 @@
 ## Nombre del proyecto: **Kick-code**
 
 ### Integrantes:
-- Kevin adrian Osorio
 - Juan Diego Zapata
 - Luis Rodrigo Ulloa
- 
+- Kevin adrian Osorio
 
 **Descripcion del sistema:**
 Kick-code es una plataforma de aprendizaje de programación diseñada para ayudar a los estudiantes o programadores juniors a mejorar sus habilidades de codificación a través de ejercicios prácticos y teóricos. La plataforma ofrece una variedad de ejercicios de programación en diferentes lenguajes, con niveles de dificultad adaptados al progreso del usuario. Además, Kick-code proporciona retroalimentación inmediata sobre los ejercicios realizados, detectando errores de sintaxis y ofreciendo explicaciones teóricas cuando sea necesario. El objetivo de Kick-code es fomentar el aprendizaje activo y mejorar la velocidad de programación de los estudiantes, brindándoles una experiencia de aprendizaje interactiva y personalizada.
@@ -19,7 +18,7 @@ Kick-code es una plataforma de aprendizaje de programación diseñada para ayuda
 - **[architectura.jpeg:](docs/Arquitectura.jpeg)** Contiene la arquitectura del sistema.
 ![Imagen de Arquitectura](docs/Arquitectura.jpeg)
 
-- **[diagrama.png:](docs/Diagrama.png)** Contiene el diagrama de clases del sistema.
-![Imagen del Diagrama](docs/Diagrama.png)
+- **[diagrama.png:](docs/diagrama.png)** Contiene el diagrama de clases del sistema.
+![Imagen del diagrama](docs/diagrama.png)
 
-- **[Grupo3_SRS.pdf:](docs/Grupo3_SRS_Primercorte_IS1.pdf)** Contiene lo que hemos avanzado hasta el momento lo subi como PDF porque no pude subirlo como archivo word ya que se van realizar mas cambios y algunos cambios que no se veran reflejados en el PDF funcional.
+- **[Grupo3_SRS.pdf:](docs/Grupo3_SRS_Archivofinal.pdf)** Contiene lo que hemos avanzado hasta el momento lo subi como PDF porque no pude subirlo como archivo word ya que se van realizar mas cambios y algunos cambios que no se veran reflejados en el PDF funcional.
