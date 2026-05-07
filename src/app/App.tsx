@@ -186,6 +186,8 @@ export default function App() {
   // Estados del formulario de login
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [authPage, setAuthPage] = useState<"login" | "register">("login");
   
   // Estados del formulario de login admin
   const [adminUsername, setAdminUsername] = useState("");
@@ -271,24 +273,25 @@ export default function App() {
   // Funciones de autenticación
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError("");
 
-    // Permitir acceso siempre, sin validaciones
-    if (!loginUsername) {
+    if (!loginUsername || !loginPassword) {
+      setLoginError("Por favor ingresa usuario y contraseña");
       return;
     }
 
-    // Crear usuario con el nombre ingresado
-    const user: User = {
-      username: loginUsername,
-      password: loginPassword,
-      fullName: loginUsername,
-      birthDate: "",
-      email: "",
-      createdAt: new Date().toISOString()
-    };
+    const storedUsers: User[] = JSON.parse(localStorage.getItem('users') || '[]');
+    const foundUser = storedUsers.find(
+      (user) => user.username === loginUsername && user.password === loginPassword
+    );
 
-    setCurrentUser(user);
-    localStorage.setItem('currentUser', JSON.stringify(user));
+    if (!foundUser) {
+      setLoginError("Usuario o contraseña incorrectos");
+      return;
+    }
+
+    setCurrentUser(foundUser);
+    localStorage.setItem('currentUser', JSON.stringify(foundUser));
     setShowLoginModal(false);
     setLoginUsername("");
     setLoginPassword("");
@@ -297,14 +300,17 @@ export default function App() {
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Permitir acceso siempre como admin
-    if (!adminUsername) {
+    if (!adminUsername || !adminPassword) {
+      return;
+    }
+
+    if (adminUsername !== 'admin' || adminPassword !== 'admin123') {
       return;
     }
 
     const admin: Admin = {
-      username: adminUsername,
-      password: adminPassword,
+      username: 'admin',
+      password: 'admin123',
       fullName: 'Administrador'
     };
 
@@ -355,7 +361,7 @@ export default function App() {
 
     setRegisterSuccess("¡Cuenta creada exitosamente! Ahora puedes iniciar sesión");
     
-    // Limpiar formulario
+    // Limpiar formulario y regresar a login
     setTimeout(() => {
       setRegisterFullName("");
       setRegisterBirthDate("");
@@ -363,8 +369,7 @@ export default function App() {
       setRegisterUsername("");
       setRegisterPassword("");
       setRegisterSuccess("");
-      setShowRegisterModal(false);
-      setShowLoginModal(true);
+      setAuthPage("login");
     }, 2000);
   };
 
@@ -939,6 +944,194 @@ export default function App() {
       setShowNotificationConfigModal(false);
     }, 1500);
   };
+
+  if (!currentUser && !currentAdmin) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-3xl rounded-[32px] border border-purple-800/60 bg-gradient-to-br from-purple-950/90 via-black/70 to-black p-8 shadow-2xl shadow-purple-900/40">
+          <div className="grid gap-8 lg:grid-cols-[1fr_auto]">
+            <div>
+              <span className="text-sm uppercase tracking-[0.3em] text-purple-400">Bienvenido a Kick-code</span>
+              <h1 className="mt-6 text-4xl font-bold text-white">Iniciar sesión</h1>
+              <p className="mt-4 text-sm text-purple-300">Accede con tu cuenta para entrar al panel. Si no tienes cuenta, regístrate aquí.</p>
+            </div>
+
+            <div className="rounded-3xl border border-purple-800/60 bg-black/60 p-5 text-right">
+              <span className="text-xs uppercase tracking-[0.3em] text-purple-400">Admin</span>
+              <p className="mt-2 text-xs text-purple-300">Usuario: admin</p>
+              <p className="text-xs text-purple-300">Contraseña: admin123</p>
+            </div>
+          </div>
+
+          {authPage === "login" ? (
+            <form onSubmit={handleLogin} className="mt-10 space-y-5">
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Usuario</label>
+                <input
+                  type="text"
+                  placeholder="Ingresa tu usuario"
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  className="w-full rounded-2xl border border-purple-800/70 bg-black/70 px-4 py-3 text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Contraseña</label>
+                <input
+                  type="password"
+                  placeholder="Ingresa tu contraseña"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-purple-800/70 bg-black/70 px-4 py-3 text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                />
+              </div>
+
+              {loginError && <p className="text-sm text-red-400">{loginError}</p>}
+
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:from-purple-500 hover:to-purple-600"
+              >
+                Iniciar sesión
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAuthPage("register")}
+                className="w-full rounded-2xl border border-purple-600 px-6 py-3 text-sm font-semibold text-purple-200 transition hover:bg-purple-900/40"
+              >
+                Regístrate aquí
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowAdminLoginModal(true)}
+                className="w-full rounded-2xl bg-black/80 border border-purple-700 px-6 py-3 text-sm font-semibold text-purple-200 transition hover:bg-purple-900/50"
+              >
+                Iniciar sesión como administrador
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} className="mt-10 space-y-5">
+              <h2 className="text-3xl font-semibold text-white">Crear cuenta</h2>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Nombre completo</label>
+                <input
+                  type="text"
+                  placeholder="Nombre completo"
+                  value={registerFullName}
+                  onChange={(e) => setRegisterFullName(e.target.value)}
+                  className="w-full rounded-2xl border border-purple-800/70 bg-black/70 px-4 py-3 text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Fecha de nacimiento</label>
+                <input
+                  type="date"
+                  value={registerBirthDate}
+                  onChange={(e) => setRegisterBirthDate(e.target.value)}
+                  className="w-full rounded-2xl border border-purple-800/70 bg-black/70 px-4 py-3 text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Correo electrónico</label>
+                <input
+                  type="email"
+                  placeholder="ejemplo@correo.com"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  className="w-full rounded-2xl border border-purple-800/70 bg-black/70 px-4 py-3 text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Usuario</label>
+                <input
+                  type="text"
+                  placeholder="Elige un nombre de usuario"
+                  value={registerUsername}
+                  onChange={(e) => setRegisterUsername(e.target.value)}
+                  className="w-full rounded-2xl border border-purple-800/70 bg-black/70 px-4 py-3 text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Contraseña</label>
+                <input
+                  type="password"
+                  placeholder="Crea una contraseña segura"
+                  value={registerPassword}
+                  onChange={(e) => setRegisterPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-purple-800/70 bg-black/70 px-4 py-3 text-white outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                />
+              </div>
+
+              {registerError && <p className="text-sm text-red-400">{registerError}</p>}
+              {registerSuccess && <p className="text-sm text-green-400">{registerSuccess}</p>}
+
+              <button
+                type="submit"
+                className="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-500/30 transition hover:from-purple-500 hover:to-purple-600"
+              >
+                Registrarse
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAuthPage("login")}
+                className="w-full rounded-2xl border border-purple-600 px-6 py-3 text-sm font-semibold text-purple-200 transition hover:bg-purple-900/40"
+              >
+                Volver al inicio de sesión
+              </button>
+            </form>
+          )}
+
+          {showAdminLoginModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-gradient-to-br from-purple-950/90 to-black border border-purple-800/50 rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-purple-900/50 relative">
+                <button 
+                  onClick={() => setShowAdminLoginModal(false)}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+                <h2 className="text-2xl font-bold text-purple-400 mb-6">Iniciar sesión Admin</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-purple-300 mb-2">Usuario</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ingresa tu usuario"
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                      className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-purple-300 mb-2">Contraseña</label>
+                    <input 
+                      type="password" 
+                      placeholder="Ingresa tu contraseña"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all"
+                    />
+                  </div>
+                  <button onClick={handleAdminLogin} className="w-full px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg hover:from-purple-500 hover:to-purple-600 transition-all shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 font-semibold mt-6">
+                    Ingresar como admin
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
