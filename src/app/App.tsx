@@ -199,6 +199,10 @@ export default function App() {
   const [practiceExercise, setPracticeExercise] = useState<string | null>(null);
   const [practiceExerciseDifficulty, setPracticeExerciseDifficulty] = useState<string | null>(null);
   const [practiceCode, setPracticeCode] = useState("");
+
+  // Estados para reintento de ejercicios fallidos
+  const [retryExerciseName, setRetryExerciseName] = useState<string | null>(null);
+  const [retryExerciseCode, setRetryExerciseCode] = useState("");
   
   // Estados del formulario de login admin
   const [adminUsername, setAdminUsername] = useState("");
@@ -822,10 +826,12 @@ export default function App() {
 
   const handleRetryExercise = (exerciseName: string) => {
     setShowRetryExerciseModal(false);
+    setRetryExerciseName(exerciseName);
+    setRetryExerciseCode("");
 
     const newNotification: Notification = {
       id: Date.now(),
-      message: `Iniciando ejercicio: ${exerciseName}`,
+      message: `Abriendo editor para: ${exerciseName}`,
       type: 'info'
     };
     setNotifications(prev => [...prev, newNotification]);
@@ -3790,6 +3796,148 @@ export default function App() {
                 <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
                   <p className="text-gray-400 text-sm mb-2">Palabras clave:</p>
                   <p className="text-2xl font-bold text-purple-300">{(practiceCode.match(/\bfor\b|\bwhile\b|\bif\b|\belse\b|\ndef\b/gi) || []).length}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Sección: Editor de Reintento de Ejercicios Fallidos */}
+        {retryExerciseName && (
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-purple-400">
+              Reintentando: {retryExerciseName}
+            </h2>
+            
+            <div className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-8 shadow-2xl shadow-purple-900/20">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-gray-400 text-sm">Ejercicio:</span>
+                    <span className="text-purple-400 font-semibold">{retryExerciseName}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-400 text-sm">Estado:</span>
+                    <span className="text-red-400 font-semibold flex items-center gap-1">
+                      <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                      Reintentando
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setRetryExerciseName(null);
+                    setRetryExerciseCode("");
+                  }}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Cerrar editor
+                </button>
+              </div>
+
+              <div className="bg-gradient-to-br from-red-950/30 to-purple-950/30 border border-red-800/50 rounded-xl p-4 mb-6">
+                <p className="text-red-300 text-sm"><span className="font-semibold">⚠ Ejercicio fallido:</span> Intenta resolver este ejercicio nuevamente. Recuerda los errores anteriores y aplica la retroalimentación que recibiste.</p>
+              </div>
+
+              <div className="bg-black/80 rounded-xl p-6 border border-purple-900/50 mb-6">
+                <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Tu solución (Python)
+                </p>
+                <textarea
+                  value={retryExerciseCode}
+                  onChange={(e) => setRetryExerciseCode(e.target.value)}
+                  placeholder={`# Escribe tu solución mejorada para ${retryExerciseName}\n# Recuerda los errores anteriores\n# Prueba con casos de prueba diferentes\n\n`}
+                  className="w-full h-80 bg-black/50 text-purple-300 border border-purple-900/50 rounded-lg p-4 font-mono text-sm focus:outline-none focus:border-purple-600 resize-none placeholder-gray-600"
+                />
+              </div>
+
+              <div className="flex gap-4 mb-6">
+                <button
+                  onClick={() => {
+                    if (retryExerciseCode.trim() === "") {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `⚠ Por favor escribe el código de tu solución`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    } else {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `✓ Solución guardada para ${retryExerciseName}`,
+                        type: 'success'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    }
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white rounded-lg transition-all shadow-lg shadow-green-500/50 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Save className="w-5 h-5" />
+                  Guardar solución
+                </button>
+                <button
+                  onClick={() => {
+                    if (retryExerciseCode.trim() === "") {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `⚠ Por favor escribe código antes de ejecutar`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    } else {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `▶ Ejecutando y validando solución...`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 3000);
+                      
+                      setTimeout(() => {
+                        const successNotification: Notification = {
+                          id: Date.now(),
+                          message: `✓ ¡Excelente! Has resuelto correctamente ${retryExerciseName}. Ejercicio aprobado!`,
+                          type: 'success'
+                        };
+                        setNotifications(prev => [...prev, successNotification]);
+                        setTimeout(() => {
+                          setNotifications(prev => prev.filter(n => n.id !== successNotification.id));
+                        }, 5000);
+                      }, 3000);
+                    }
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-lg transition-all shadow-lg shadow-purple-500/50 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Play className="w-5 h-5" />
+                  Ejecutar y validar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Caracteres:</p>
+                  <p className="text-2xl font-bold text-purple-300">{retryExerciseCode.length}</p>
+                </div>
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Líneas:</p>
+                  <p className="text-2xl font-bold text-purple-300">{retryExerciseCode.split('\n').length}</p>
+                </div>
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Palabras clave:</p>
+                  <p className="text-2xl font-bold text-purple-300">{(retryExerciseCode.match(/\bfor\b|\bwhile\b|\bif\b|\belse\b|\ndef\b/gi) || []).length}</p>
                 </div>
               </div>
             </div>
