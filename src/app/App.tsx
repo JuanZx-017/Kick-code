@@ -188,6 +188,17 @@ export default function App() {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [authPage, setAuthPage] = useState<"login" | "register">("login");
+
+  // Estados para selección de lenguaje y proyecto (HU-04, HU-05)
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [showCodeEditor, setShowCodeEditor] = useState(false);
+  const [projectCode, setProjectCode] = useState("");
+
+  // Estados para práctica de recomendaciones (HU-09)
+  const [practiceExercise, setPracticeExercise] = useState<string | null>(null);
+  const [practiceExerciseDifficulty, setPracticeExerciseDifficulty] = useState<string | null>(null);
+  const [practiceCode, setPracticeCode] = useState("");
   
   // Estados del formulario de login admin
   const [adminUsername, setAdminUsername] = useState("");
@@ -906,6 +917,10 @@ export default function App() {
   };
 
   const handleSelectLanguage = (language: string) => {
+    setSelectedLanguage(language);
+    setSelectedProject(null);
+    setShowCodeEditor(false);
+    setProjectCode("");
     const newNotification: Notification = {
       id: Date.now(),
       message: `Lenguaje seleccionado: ${language}`,
@@ -918,10 +933,13 @@ export default function App() {
   };
 
   const handleSelectProject = (project: string) => {
+    setSelectedProject(project);
+    setShowCodeEditor(true);
+    setProjectCode("");
     const newNotification: Notification = {
       id: Date.now(),
-      message: `Iniciando proyecto: ${project}`,
-      type: 'info'
+      message: `¡Vas a hacer el proyecto ${project} en el lenguaje ${selectedLanguage}!`,
+      type: 'success'
     };
     setNotifications(prev => [...prev, newNotification]);
     setTimeout(() => {
@@ -3612,9 +3630,12 @@ export default function App() {
                   </div>
                   <button
                     onClick={() => {
+                      setPracticeExercise(exercise.title);
+                      setPracticeExerciseDifficulty(exercise.difficulty);
+                      setPracticeCode("");
                       const newNotification: Notification = {
                         id: Date.now(),
-                        message: `Iniciando práctica: ${exercise.title}`,
+                        message: `Abriendo práctica: ${exercise.title}`,
                         type: 'info'
                       };
                       setNotifications(prev => [...prev, newNotification]);
@@ -3631,6 +3652,149 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        {/* Sección: Editor de Práctica de Ejercicios Recomendados (HU-09) */}
+        {practiceExercise && (
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-purple-400">
+              Practicando: {practiceExercise}
+            </h2>
+            
+            <div className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-8 shadow-2xl shadow-purple-900/20">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-gray-400 text-sm">Ejercicio:</span>
+                    <span className="text-purple-400 font-semibold">{practiceExercise}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-400 text-sm">Dificultad:</span>
+                    <span className={`font-semibold ${
+                      practiceExerciseDifficulty === 'Fácil' ? 'text-green-400' :
+                      practiceExerciseDifficulty === 'Medio' ? 'text-yellow-400' : 'text-red-400'
+                    }`}>{practiceExerciseDifficulty}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setPracticeExercise(null);
+                    setPracticeExerciseDifficulty(null);
+                    setPracticeCode("");
+                  }}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Cerrar práctica
+                </button>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-950/30 to-purple-950/30 border border-blue-800/50 rounded-xl p-4 mb-6">
+                <p className="text-blue-300 text-sm"><span className="font-semibold">Instrucciones:</span> Completa el ejercicio escribiendo el código correcto. Recuerda los conceptos teóricos y evita los errores comunes.</p>
+              </div>
+
+              <div className="bg-black/80 rounded-xl p-6 border border-purple-900/50 mb-6">
+                <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Tu solución (Python)
+                </p>
+                <textarea
+                  value={practiceCode}
+                  onChange={(e) => setPracticeCode(e.target.value)}
+                  placeholder={`# Escribe tu solución para ${practiceExercise}\n# Recuerda:\n# - Usar sintaxis correcta\n# - Considerar casos especiales\n# - Probar con diferentes valores\n\n`}
+                  className="w-full h-80 bg-black/50 text-purple-300 border border-purple-900/50 rounded-lg p-4 font-mono text-sm focus:outline-none focus:border-purple-600 resize-none placeholder-gray-600"
+                />
+              </div>
+
+              <div className="flex gap-4 mb-6">
+                <button
+                  onClick={() => {
+                    if (practiceCode.trim() === "") {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `⚠ Por favor escribe el código de tu solución`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    } else {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `✓ Solución guardada para ${practiceExercise}`,
+                        type: 'success'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    }
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white rounded-lg transition-all shadow-lg shadow-green-500/50 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Save className="w-5 h-5" />
+                  Guardar solución
+                </button>
+                <button
+                  onClick={() => {
+                    if (practiceCode.trim() === "") {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `⚠ Por favor escribe código antes de ejecutar`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    } else {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `▶ Ejecutando y validando solución...`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 3000);
+                      
+                      setTimeout(() => {
+                        const successNotification: Notification = {
+                          id: Date.now(),
+                          message: `✓ ¡Excelente! Has completado correctamente ${practiceExercise}. Practica otro ejercicio`,
+                          type: 'success'
+                        };
+                        setNotifications(prev => [...prev, successNotification]);
+                        setTimeout(() => {
+                          setNotifications(prev => prev.filter(n => n.id !== successNotification.id));
+                        }, 5000);
+                      }, 3000);
+                    }
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-lg transition-all shadow-lg shadow-purple-500/50 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Play className="w-5 h-5" />
+                  Ejecutar y validar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Caracteres:</p>
+                  <p className="text-2xl font-bold text-purple-300">{practiceCode.length}</p>
+                </div>
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Líneas:</p>
+                  <p className="text-2xl font-bold text-purple-300">{practiceCode.split('\n').length}</p>
+                </div>
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Palabras clave:</p>
+                  <p className="text-2xl font-bold text-purple-300">{(practiceCode.match(/\bfor\b|\bwhile\b|\bif\b|\belse\b|\ndef\b/gi) || []).length}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Section 1: Ejercicios de Sintaxis (HU-01) */}
         <section id="ejercicios" className="space-y-6">
@@ -3863,48 +4027,173 @@ export default function App() {
               { name: "Java", icon: "☕" },
               { name: "C++", icon: "⚡" },
               { name: "JavaScript", icon: "🚀" }
-            ].map((lang) => (
-              <div
-                key={lang.name}
-                onClick={() => handleSelectLanguage(lang.name)}
-                className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-8 hover:border-purple-600 transition-all cursor-pointer shadow-lg hover:shadow-purple-500/50 group"
-              >
-                <div className="text-6xl mb-4 group-hover:scale-110 transition-transform">{lang.icon}</div>
-                <h3 className="text-xl font-bold text-purple-300 group-hover:text-purple-200">{lang.name}</h3>
-              </div>
-            ))}
+            ]
+              .filter(lang => !selectedLanguage || lang.name === selectedLanguage)
+              .map((lang) => (
+                <div
+                  key={lang.name}
+                  onClick={() => handleSelectLanguage(lang.name)}
+                  className={`bg-gradient-to-br from-purple-950/50 to-black border rounded-2xl p-8 transition-all cursor-pointer shadow-lg group ${
+                    selectedLanguage === lang.name
+                      ? 'border-purple-400 shadow-purple-500/70'
+                      : 'border-purple-800/50 hover:border-purple-600 hover:shadow-purple-500/50'
+                  }`}
+                >
+                  <div className="text-6xl mb-4 group-hover:scale-110 transition-transform">{lang.icon}</div>
+                  <h3 className="text-xl font-bold text-purple-300 group-hover:text-purple-200">{lang.name}</h3>
+                  {selectedLanguage === lang.name && <p className="text-sm text-purple-400 mt-2">✓ Seleccionado</p>}
+                </div>
+              ))}
           </div>
+
+          {selectedLanguage && (
+            <button
+              onClick={() => {
+                setSelectedLanguage(null);
+                setSelectedProject(null);
+                setShowCodeEditor(false);
+                setProjectCode("");
+              }}
+              className="mt-4 px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            >
+              Cambiar lenguaje
+            </button>
+          )}
         </section>
 
         {/* Section 5: Ejercicios por tipo de proyecto (HU-05) */}
-        <section id="proyectos" className="space-y-6">
-          <h2 className="text-3xl font-bold text-purple-400">Ejercicios por Tipo de Proyecto</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { name: "Calculadora", icon: Calculator, color: "from-purple-600 to-pink-600" },
-              { name: "Sistema de Inventario", icon: Package, color: "from-purple-600 to-blue-600" },
-              { name: "Juego simple", icon: Gamepad2, color: "from-purple-600 to-green-600" },
-              { name: "Gestión de estudiantes", icon: Trophy, color: "from-purple-600 to-orange-600" }
-            ].map((project) => (
-              <div
-                key={project.name}
-                onClick={() => handleSelectProject(project.name)}
-                className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-6 hover:border-purple-600 transition-all cursor-pointer shadow-lg hover:shadow-purple-500/50 group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${project.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                    <project.icon className="w-8 h-8" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-purple-300 group-hover:text-purple-200">{project.name}</h3>
-                    <p className="text-gray-500 text-sm">Práctica con proyectos reales</p>
+        {selectedLanguage && !showCodeEditor && (
+          <section id="proyectos" className="space-y-6">
+            <h2 className="text-3xl font-bold text-purple-400">Ejercicios por Tipo de Proyecto</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[
+                { name: "Calculadora", icon: Calculator, color: "from-purple-600 to-pink-600" },
+                { name: "Sistema de Inventario", icon: Package, color: "from-purple-600 to-blue-600" },
+                { name: "Juego simple", icon: Gamepad2, color: "from-purple-600 to-green-600" },
+                { name: "Gestión de estudiantes", icon: Trophy, color: "from-purple-600 to-orange-600" }
+              ].map((project) => (
+                <div
+                  key={project.name}
+                  onClick={() => handleSelectProject(project.name)}
+                  className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-6 hover:border-purple-600 transition-all cursor-pointer shadow-lg hover:shadow-purple-500/50 group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${project.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                      <project.icon className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-purple-300 group-hover:text-purple-200">{project.name}</h3>
+                      <p className="text-gray-500 text-sm">Práctica con proyectos reales</p>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Section 5.5: Editor de código (HU-05) */}
+        {showCodeEditor && selectedLanguage && selectedProject && (
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-purple-400">
+              Editor de Código - {selectedProject}
+            </h2>
+            
+            <div className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-8 shadow-2xl shadow-purple-900/20">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-gray-400 text-sm">Lenguaje: <span className="text-purple-400 font-semibold">{selectedLanguage}</span></p>
+                  <p className="text-gray-400 text-sm">Proyecto: <span className="text-purple-400 font-semibold">{selectedProject}</span></p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCodeEditor(false);
+                    setSelectedProject(null);
+                    setProjectCode("");
+                  }}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Cambiar proyecto
+                </button>
               </div>
-            ))}
-          </div>
-        </section>
+
+              <div className="bg-black/80 rounded-xl p-6 border border-purple-900/50 mb-6">
+                <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Tu código
+                </p>
+                <textarea
+                  value={projectCode}
+                  onChange={(e) => setProjectCode(e.target.value)}
+                  placeholder={`// Escribe tu código de ${selectedLanguage} aquí...\n\n`}
+                  className="w-full h-96 bg-black/50 text-purple-300 border border-purple-900/50 rounded-lg p-4 font-mono text-sm focus:outline-none focus:border-purple-600 resize-none placeholder-gray-600"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    const newNotification: Notification = {
+                      id: Date.now(),
+                      message: `✓ Código guardado para ${selectedProject} en ${selectedLanguage}`,
+                      type: 'success'
+                    };
+                    setNotifications(prev => [...prev, newNotification]);
+                    setTimeout(() => {
+                      setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                    }, 5000);
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white rounded-lg transition-all shadow-lg shadow-green-500/50 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Save className="w-5 h-5" />
+                  Guardar código
+                </button>
+                <button
+                  onClick={() => {
+                    if (projectCode.trim() === "") {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `⚠ Por favor escribe código antes de ejecutar`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    } else {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `▶ Ejecutando código de ${selectedProject}...`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    }
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-lg transition-all shadow-lg shadow-purple-500/50 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Play className="w-5 h-5" />
+                  Ejecutar
+                </button>
+              </div>
+
+              <div className="mt-6 grid grid-cols-2 gap-4">
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Caracteres:</p>
+                  <p className="text-2xl font-bold text-purple-300">{projectCode.length}</p>
+                </div>
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Líneas:</p>
+                  <p className="text-2xl font-bold text-purple-300">{projectCode.split('\n').length}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Section 6: Sistema de dificultad adaptativa (HU-06) */}
         <section id="progreso" className="space-y-6">
