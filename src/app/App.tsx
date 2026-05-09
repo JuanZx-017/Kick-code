@@ -42,9 +42,12 @@ interface SolutionExample {
 interface Course {
   id: number;
   name: string;
+  language: string;
   level: string;
   exercises: number;
   students: number;
+  duration: string;
+  status: 'activo' | 'terminado';
   color: string;
 }
 
@@ -117,12 +120,12 @@ export default function App() {
   ]);
 
   const [courses, setCourses] = useState<Course[]>([
-    { id: 1, name: "Fundamentos de Python", level: "Principiante", exercises: 25, students: 45, color: "green" },
-    { id: 2, name: "JavaScript Intermedio", level: "Intermedio", exercises: 18, students: 32, color: "yellow" },
-    { id: 3, name: "Algoritmos Avanzados", level: "Avanzado", exercises: 15, students: 12, color: "red" },
-    { id: 4, name: "Estructuras de Datos", level: "Intermedio", exercises: 22, students: 28, color: "yellow" },
-    { id: 5, name: "POO en Java", level: "Avanzado", exercises: 20, students: 18, color: "red" },
-    { id: 6, name: "Web con React", level: "Intermedio", exercises: 30, students: 35, color: "yellow" },
+    { id: 1, name: "Fundamentos de Python", language: "Python", level: "Principiante", exercises: 25, students: 45, duration: "-", status: "activo", color: "green" },
+    { id: 2, name: "JavaScript Intermedio", language: "JavaScript", level: "Intermedio", exercises: 18, students: 32, duration: "-", status: "activo", color: "yellow" },
+    { id: 3, name: "Algoritmos Avanzados", language: "Python", level: "Avanzado", exercises: 15, students: 12, duration: "3h 45m", status: "terminado", color: "red" },
+    { id: 4, name: "Estructuras de Datos", language: "Python", level: "Intermedio", exercises: 22, students: 28, duration: "4h 10m", status: "terminado", color: "yellow" },
+    { id: 5, name: "POO en Java", language: "Java", level: "Avanzado", exercises: 20, students: 18, duration: "4h 30m", status: "terminado", color: "red" },
+    { id: 6, name: "Web con React", language: "JavaScript", level: "Intermedio", exercises: 30, students: 35, duration: "-", status: "activo", color: "yellow" },
   ]);
 
   const [exercisesToDelete, setExercisesToDelete] = useState<Exercise[]>([
@@ -658,9 +661,12 @@ export default function App() {
     const newCourse: Course = {
       id: Date.now(),
       name: newCourseName,
+      language: "General",
       level: newCourseLevel,
       exercises: newCourseExercises,
       students: 0,
+      duration: "-",
+      status: "activo",
       color: newCourseLevel === "Principiante" ? "green" : newCourseLevel === "Intermedio" ? "yellow" : "red"
     };
 
@@ -2338,6 +2344,14 @@ export default function App() {
                       <span className="text-gray-400">Estudiantes:</span>
                       <span className="text-purple-300 font-semibold">{course.students}</span>
                     </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">Tipo de curso:</span>
+                      <span className="text-purple-300 font-semibold">{course.language}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-400">Duración:</span>
+                      <span className="text-purple-300 font-semibold">{course.status === 'terminado' ? course.duration : 'En progreso'}</span>
+                    </div>
                   </div>
 
                   {showDeleteConfirm === course.id ? (
@@ -3955,7 +3969,7 @@ export default function App() {
                 <div className="flex items-center gap-3">
                   <Timer className="w-6 h-6 text-purple-400" />
                   <div>
-                    <p className="text-sm text-gray-400">Tiempo transcurrido</p>
+                    <p className="text-sm text-gray-400">Duración del ejercicio</p>
                     <p className="text-2xl font-bold text-purple-300 font-mono">{formatTime(exerciseTimer)}</p>
                   </div>
                 </div>
