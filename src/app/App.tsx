@@ -150,6 +150,8 @@ export default function App() {
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
   const [showAddSolutionModal, setShowAddSolutionModal] = useState(false);
   const [showAssignCourseModal, setShowAssignCourseModal] = useState(false);
+  const [showViewExerciseModal, setShowViewExerciseModal] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -162,6 +164,11 @@ export default function App() {
   const [newCourseExercises, setNewCourseExercises] = useState(0);
   const [selectedCourseToAssign, setSelectedCourseToAssign] = useState("");
   const [selectedStudentToAssign, setSelectedStudentToAssign] = useState("");
+
+  // Estados para formulario de nueva solución
+  const [newSolutionExercise, setNewSolutionExercise] = useState("");
+  const [newSolutionLanguage, setNewSolutionLanguage] = useState("Python");
+  const [newSolutionCode, setNewSolutionCode] = useState("");
 
   // Estados para gestión de soluciones
   const [solutions, setSolutions] = useState([
@@ -512,6 +519,11 @@ export default function App() {
     }, 5000);
   };
 
+  const handleViewExercise = (exercise: Exercise) => {
+    setSelectedExercise(exercise);
+    setShowViewExerciseModal(true);
+  };
+
   const handleApplyCodeImprovements = () => {
     setCurrentExerciseCode("for numero in range(5):\n    print(numero)");
     setCodeApplied(true);
@@ -678,6 +690,45 @@ export default function App() {
     const newNotification: Notification = {
       id: Date.now(),
       message: `Curso "${newCourseName}" creado exitosamente`,
+      type: 'success'
+    };
+    setNotifications(prev => [...prev, newNotification]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+    }, 5000);
+  };
+
+  const handleAddSolution = () => {
+    if (!newSolutionExercise || !newSolutionCode.trim()) {
+      const newNotification: Notification = {
+        id: Date.now(),
+        message: 'Por favor completa todos los campos correctamente',
+        type: 'warning'
+      };
+      setNotifications(prev => [...prev, newNotification]);
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+      }, 5000);
+      return;
+    }
+
+    const newSolution = {
+      id: Date.now(),
+      exercise: newSolutionExercise,
+      language: newSolutionLanguage,
+      approved: false,
+      lastEdit: new Date().toLocaleDateString('es-ES'),
+      code: newSolutionCode
+    };
+
+    setSolutions(prev => [...prev, newSolution]);
+    setNewSolutionExercise("");
+    setNewSolutionCode("");
+    setShowAddSolutionModal(false);
+
+    const newNotification: Notification = {
+      id: Date.now(),
+      message: `Solución "${newSolutionExercise}" creada exitosamente`,
       type: 'success'
     };
     setNotifications(prev => [...prev, newNotification]);
@@ -2896,7 +2947,10 @@ export default function App() {
                       </div>
 
                       <div className="flex gap-2">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-purple-900/30 border border-purple-700/50 rounded-lg hover:bg-purple-900/50 transition-all text-purple-300 text-sm">
+                        <button
+                          onClick={() => handleViewExercise(exercise)}
+                          className="flex items-center gap-2 px-4 py-2 bg-purple-900/30 border border-purple-700/50 rounded-lg hover:bg-purple-900/50 transition-all text-purple-300 text-sm"
+                        >
                           <Eye className="w-4 h-4" />
                           Ver
                         </button>
@@ -2926,6 +2980,78 @@ export default function App() {
               <div className="bg-gradient-to-br from-orange-900/30 to-black border border-orange-700/50 rounded-xl p-4">
                 <p className="text-gray-400 text-sm mb-1">Reportes totales</p>
                 <p className="text-3xl font-bold text-orange-300">{exercisesToDelete.reduce((sum, e) => sum + e.reports, 0)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ver Ejercicio */}
+      {showViewExerciseModal && selectedExercise && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-purple-950/90 to-black border border-purple-800/50 rounded-2xl p-8 max-w-2xl w-full shadow-2xl shadow-purple-900/50 relative">
+            <button
+              onClick={() => setShowViewExerciseModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <h2 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-2">
+              <Eye className="w-6 h-6" />
+              Ver Ejercicio
+            </h2>
+
+            <div className="space-y-6">
+              <div className="bg-black/50 border border-purple-800/50 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <h3 className="text-xl font-semibold text-purple-300">{selectedExercise.name}</h3>
+                  <span className="px-3 py-1 bg-purple-900/30 border border-purple-700/50 rounded text-sm text-purple-300">
+                    {selectedExercise.language}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    selectedExercise.status === 'obsolete' ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-700/50' :
+                    selectedExercise.status === 'bad-design' ? 'bg-red-900/30 text-red-400 border border-red-700/50' :
+                    'bg-orange-900/30 text-orange-400 border border-orange-700/50'
+                  }`}>
+                    {selectedExercise.status === 'obsolete' ? 'Obsoleto' : selectedExercise.status === 'bad-design' ? 'Mal diseñado' : 'Duplicado'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gray-900/50 border border-gray-700/50 rounded-lg p-4">
+                    <p className="text-gray-400 text-sm mb-1">Usuarios afectados</p>
+                    <p className="text-2xl font-bold text-purple-300">{selectedExercise.users}</p>
+                  </div>
+                  <div className="bg-gray-900/50 border border-gray-700/50 rounded-lg p-4">
+                    <p className="text-gray-400 text-sm mb-1">Reportes</p>
+                    <p className="text-2xl font-bold text-red-300">{selectedExercise.reports}</p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-900/50 border border-gray-700/50 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-purple-300 mb-3">Descripción del problema</h4>
+                  <p className="text-gray-300 leading-relaxed">
+                    {selectedExercise.status === 'obsolete'
+                      ? 'Este ejercicio utiliza sintaxis o conceptos que han sido reemplazados por versiones más modernas del lenguaje. Los estudiantes pueden confundirse con prácticas obsoletas.'
+                      : selectedExercise.status === 'bad-design'
+                      ? 'El diseño de este ejercicio no es claro o presenta problemas pedagógicos. La explicación es confusa o los requerimientos no están bien definidos.'
+                      : 'Este ejercicio es muy similar a otros ya existentes en la plataforma. Mantener contenido duplicado puede causar confusión en los estudiantes.'
+                    }
+                  </p>
+                </div>
+
+                <div className="bg-gray-900/50 border border-gray-700/50 rounded-lg p-4 mt-4">
+                  <h4 className="text-lg font-semibold text-purple-300 mb-3">Recomendación</h4>
+                  <p className="text-gray-300 leading-relaxed">
+                    {selectedExercise.status === 'obsolete'
+                      ? 'Se recomienda actualizar el ejercicio con sintaxis moderna o reemplazarlo por uno equivalente que use las mejores prácticas actuales.'
+                      : selectedExercise.status === 'bad-design'
+                      ? 'Se sugiere rediseñar el ejercicio con instrucciones más claras, ejemplos mejorados y una estructura pedagógica más efectiva.'
+                      : 'Considerar fusionar este ejercicio con uno similar existente o eliminarlo para evitar duplicación de contenido.'
+                    }
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -3176,6 +3302,77 @@ export default function App() {
               >
                 <Plus className="w-5 h-5" />
                 Crear Curso
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Agregar Solución (Admin) */}
+      {showAddSolutionModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-purple-950/90 to-black border border-purple-800/50 rounded-2xl p-8 max-w-lg w-full shadow-2xl shadow-purple-900/50 relative">
+            <button
+              onClick={() => setShowAddSolutionModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <h2 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-2">
+              <Plus className="w-6 h-6" />
+              Agregar Nueva Solución
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Nombre del ejercicio</label>
+                <input
+                  type="text"
+                  value={newSolutionExercise}
+                  onChange={(e) => setNewSolutionExercise(e.target.value)}
+                  placeholder="Ej: Bucle For básico"
+                  className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all text-purple-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Lenguaje de programación</label>
+                <select
+                  value={newSolutionLanguage}
+                  onChange={(e) => setNewSolutionLanguage(e.target.value)}
+                  className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all text-purple-200"
+                >
+                  <option value="Python">Python</option>
+                  <option value="JavaScript">JavaScript</option>
+                  <option value="Java">Java</option>
+                  <option value="C++">C++</option>
+                  <option value="C#">C#</option>
+                  <option value="TypeScript">TypeScript</option>
+                  <option value="PHP">PHP</option>
+                  <option value="Ruby">Ruby</option>
+                  <option value="Go">Go</option>
+                  <option value="Rust">Rust</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-purple-300 mb-2">Código de la solución</label>
+                <textarea
+                  value={newSolutionCode}
+                  onChange={(e) => setNewSolutionCode(e.target.value)}
+                  placeholder="Escribe el código de la solución aquí..."
+                  rows={8}
+                  className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all text-purple-200 font-mono text-sm resize-vertical"
+                />
+              </div>
+
+              <button
+                onClick={handleAddSolution}
+                className="w-full mt-4 flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 rounded-lg hover:from-green-500 hover:to-green-600 transition-all shadow-lg shadow-green-500/50 hover:shadow-green-500/70 font-semibold"
+              >
+                <Plus className="w-5 h-5" />
+                Agregar Solución
               </button>
             </div>
           </div>
