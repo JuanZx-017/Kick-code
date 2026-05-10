@@ -151,6 +151,7 @@ export default function App() {
   const [showAddSolutionModal, setShowAddSolutionModal] = useState(false);
   const [showAssignCourseModal, setShowAssignCourseModal] = useState(false);
   const [showViewExerciseModal, setShowViewExerciseModal] = useState(false);
+  const [showLanguagesModal, setShowLanguagesModal] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
@@ -169,6 +170,28 @@ export default function App() {
   const [newSolutionExercise, setNewSolutionExercise] = useState("");
   const [newSolutionLanguage, setNewSolutionLanguage] = useState("Python");
   const [newSolutionCode, setNewSolutionCode] = useState("");
+
+  // Estados para gestión de lenguajes
+  const [languages, setLanguages] = useState<Array<{ name: string; icon: string }>>([
+    { name: "Python", icon: "🐍" },
+    { name: "Java", icon: "☕" },
+    { name: "C++", icon: "⚡" },
+    { name: "JavaScript", icon: "🚀" }
+  ]);
+  const [newLanguageName, setNewLanguageName] = useState("");
+  const [newLanguageIcon, setNewLanguageIcon] = useState("");
+
+  // Estados para gestión de proyectos
+  const [projects, setProjects] = useState<Array<{ name: string; icon: string; color: string }>>([
+    { name: "Calculadora", icon: "🧮", color: "from-purple-600 to-pink-600" },
+    { name: "Sistema de Inventario", icon: "📦", color: "from-purple-600 to-blue-600" },
+    { name: "Juego simple", icon: "🎮", color: "from-purple-600 to-green-600" },
+    { name: "Gestión de estudiantes", icon: "🏆", color: "from-purple-600 to-orange-600" }
+  ]);
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectIcon, setNewProjectIcon] = useState("");
+  const [newProjectColor, setNewProjectColor] = useState("from-purple-600 to-pink-600");
 
   // Estados para gestión de soluciones
   const [solutions, setSolutions] = useState([
@@ -248,6 +271,18 @@ export default function App() {
         fullName: 'Administrador'
       };
       localStorage.setItem('admins', JSON.stringify([defaultAdmin]));
+    }
+
+    // Cargar lenguajes desde localStorage
+    const savedLanguages = localStorage.getItem('languages');
+    if (savedLanguages) {
+      setLanguages(JSON.parse(savedLanguages));
+    }
+
+    // Cargar proyectos desde localStorage
+    const savedProjects = localStorage.getItem('projects');
+    if (savedProjects) {
+      setProjects(JSON.parse(savedProjects));
     }
   }, []);
 
@@ -1026,6 +1061,137 @@ export default function App() {
     }, 1500);
   };
 
+  // Función para agregar nuevo lenguaje
+  const handleAddLanguage = () => {
+    if (!newLanguageName.trim() || !newLanguageIcon.trim()) {
+      const errorNotification: Notification = {
+        id: Date.now(),
+        message: 'Por favor completa todos los campos',
+        type: 'warning'
+      };
+      setNotifications(prev => [...prev, errorNotification]);
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== errorNotification.id));
+      }, 5000);
+      return;
+    }
+
+    // Verificar si el lenguaje ya existe
+    if (languages.some(lang => lang.name.toLowerCase() === newLanguageName.toLowerCase())) {
+      const errorNotification: Notification = {
+        id: Date.now(),
+        message: 'Este lenguaje ya existe',
+        type: 'warning'
+      };
+      setNotifications(prev => [...prev, errorNotification]);
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== errorNotification.id));
+      }, 5000);
+      return;
+    }
+
+    const updatedLanguages = [...languages, { name: newLanguageName, icon: newLanguageIcon }];
+    setLanguages(updatedLanguages);
+    localStorage.setItem('languages', JSON.stringify(updatedLanguages));
+
+    const successNotification: Notification = {
+      id: Date.now(),
+      message: `Lenguaje "${newLanguageName}" agregado exitosamente`,
+      type: 'success'
+    };
+    setNotifications(prev => [...prev, successNotification]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== successNotification.id));
+    }, 5000);
+
+    // Limpiar formulario
+    setNewLanguageName("");
+    setNewLanguageIcon("");
+  };
+
+  // Función para eliminar lenguaje
+  const handleDeleteLanguage = (languageName: string) => {
+    const updatedLanguages = languages.filter(lang => lang.name !== languageName);
+    setLanguages(updatedLanguages);
+    localStorage.setItem('languages', JSON.stringify(updatedLanguages));
+
+    const successNotification: Notification = {
+      id: Date.now(),
+      message: `Lenguaje "${languageName}" eliminado exitosamente`,
+      type: 'success'
+    };
+    setNotifications(prev => [...prev, successNotification]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== successNotification.id));
+    }, 5000);
+  };
+
+  // Función para agregar nuevo proyecto
+  const handleAddProject = () => {
+    if (!newProjectName.trim() || !newProjectIcon.trim()) {
+      const errorNotification: Notification = {
+        id: Date.now(),
+        message: 'Por favor completa todos los campos',
+        type: 'warning'
+      };
+      setNotifications(prev => [...prev, errorNotification]);
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== errorNotification.id));
+      }, 5000);
+      return;
+    }
+
+    // Verificar si el proyecto ya existe
+    if (projects.some(proj => proj.name.toLowerCase() === newProjectName.toLowerCase())) {
+      const errorNotification: Notification = {
+        id: Date.now(),
+        message: 'Este proyecto ya existe',
+        type: 'warning'
+      };
+      setNotifications(prev => [...prev, errorNotification]);
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== errorNotification.id));
+      }, 5000);
+      return;
+    }
+
+    const updatedProjects = [...projects, { name: newProjectName, icon: newProjectIcon, color: newProjectColor }];
+    setProjects(updatedProjects);
+    localStorage.setItem('projects', JSON.stringify(updatedProjects));
+
+    const successNotification: Notification = {
+      id: Date.now(),
+      message: `Proyecto "${newProjectName}" agregado exitosamente`,
+      type: 'success'
+    };
+    setNotifications(prev => [...prev, successNotification]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== successNotification.id));
+    }, 5000);
+
+    // Limpiar formulario
+    setNewProjectName("");
+    setNewProjectIcon("");
+    setNewProjectColor("from-purple-600 to-pink-600");
+  };
+
+  // Función para eliminar proyecto
+  const handleDeleteProject = (projectName: string) => {
+    const updatedProjects = projects.filter(proj => proj.name !== projectName);
+    setProjects(updatedProjects);
+    localStorage.setItem('projects', JSON.stringify(updatedProjects));
+
+    const successNotification: Notification = {
+      id: Date.now(),
+      message: `Proyecto "${projectName}" eliminado exitosamente`,
+      type: 'success'
+    };
+    setNotifications(prev => [...prev, successNotification]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== successNotification.id));
+    }, 5000);
+  };
+
   if (!currentUser && !currentAdmin) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-8">
@@ -1238,9 +1404,23 @@ export default function App() {
               ) : (
                 <a href="#ejercicios" className="hover:text-purple-400 transition-colors">Ejercicios</a>
               )}
-              <a href="#lenguajes" className="hover:text-purple-400 transition-colors">Lenguajes</a>
-              <a href="#proyectos" className="hover:text-purple-400 transition-colors">Proyectos</a>
-              <a href="#progreso" className="hover:text-purple-400 transition-colors">Progreso</a>
+              {currentAdmin ? (
+                <button onClick={() => setShowLanguagesModal(true)} className="hover:text-purple-400 transition-colors">
+                  Lenguajes
+                </button>
+              ) : (
+                <a href="#lenguajes" className="hover:text-purple-400 transition-colors">Lenguajes</a>
+              )}
+              {currentAdmin ? (
+                <button onClick={() => setShowProjectsModal(true)} className="hover:text-purple-400 transition-colors">
+                  Proyectos
+                </button>
+              ) : (
+                <a href="#proyectos" className="hover:text-purple-400 transition-colors">Proyectos</a>
+              )}
+              {!currentAdmin && (
+                <a href="#progreso" className="hover:text-purple-400 transition-colors">Progreso</a>
+              )}
               
               {/* Botones de autenticación */}
               {currentAdmin ? (
@@ -4381,12 +4561,7 @@ export default function App() {
           <h2 className="text-3xl font-bold text-purple-400">Selecciona el lenguaje</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { name: "Python", icon: "🐍" },
-              { name: "Java", icon: "☕" },
-              { name: "C++", icon: "⚡" },
-              { name: "JavaScript", icon: "🚀" }
-            ]
+            {languages
               .filter(lang => !selectedLanguage || lang.name === selectedLanguage)
               .map((lang) => (
                 <div
@@ -4426,20 +4601,15 @@ export default function App() {
             <h2 className="text-3xl font-bold text-purple-400">Ejercicios por Tipo de Proyecto</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                { name: "Calculadora", icon: Calculator, color: "from-purple-600 to-pink-600" },
-                { name: "Sistema de Inventario", icon: Package, color: "from-purple-600 to-blue-600" },
-                { name: "Juego simple", icon: Gamepad2, color: "from-purple-600 to-green-600" },
-                { name: "Gestión de estudiantes", icon: Trophy, color: "from-purple-600 to-orange-600" }
-              ].map((project) => (
+              {projects.map((project) => (
                 <div
                   key={project.name}
                   onClick={() => handleSelectProject(project.name)}
                   className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-6 hover:border-purple-600 transition-all cursor-pointer shadow-lg hover:shadow-purple-500/50 group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${project.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                      <project.icon className="w-8 h-8" />
+                    <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${project.color} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform text-4xl`}>
+                      {project.icon}
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-purple-300 group-hover:text-purple-200">{project.name}</h3>
@@ -4673,6 +4843,172 @@ export default function App() {
           </>
         )}
       </div>
+
+      {/* Modal de Gestión de Lenguajes para Admin */}
+      {showLanguagesModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-purple-950/90 to-black border border-purple-800/50 rounded-2xl p-8 max-w-4xl w-full shadow-2xl shadow-purple-900/50 relative max-h-[80vh] overflow-y-auto">
+            <button
+              onClick={() => setShowLanguagesModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <h2 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-2">
+              <Code2 className="w-6 h-6" />
+              Gestión de Lenguajes
+            </h2>
+
+            {/* Lista de lenguajes existentes */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-purple-300 mb-4">Lenguajes Disponibles</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {languages.map((lang) => (
+                  <div key={lang.name} className="bg-gradient-to-br from-purple-900/30 to-black border border-purple-700/50 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-4xl">{lang.icon}</span>
+                      <span className="text-lg font-semibold text-purple-300">{lang.name}</span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteLanguage(lang.name)}
+                      className="p-2 bg-red-900/30 border border-red-700/50 rounded-lg hover:bg-red-900/50 transition-all text-red-400"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Formulario para agregar nuevo lenguaje */}
+            <div className="border-t border-purple-800/50 pt-6">
+              <h3 className="text-lg font-semibold text-purple-300 mb-4">Agregar Nuevo Lenguaje</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-purple-300 mb-2">Nombre del Lenguaje</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Rust, TypeScript, Go..."
+                    value={newLanguageName}
+                    onChange={(e) => setNewLanguageName(e.target.value)}
+                    className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-purple-300 mb-2">Emoji o Icono</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 🦀 (solo un carácter)"
+                    value={newLanguageIcon}
+                    onChange={(e) => setNewLanguageIcon(e.target.value)}
+                    maxLength={2}
+                    className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all"
+                  />
+                </div>
+                <button
+                  onClick={handleAddLanguage}
+                  className="w-full px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg hover:from-purple-500 hover:to-purple-600 transition-all shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Agregar Lenguaje
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Gestión de Proyectos para Admin */}
+      {showProjectsModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-purple-950/90 to-black border border-purple-800/50 rounded-2xl p-8 max-w-4xl w-full shadow-2xl shadow-purple-900/50 relative max-h-[80vh] overflow-y-auto">
+            <button
+              onClick={() => setShowProjectsModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <h2 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-2">
+              <Gamepad2 className="w-6 h-6" />
+              Gestión de Proyectos
+            </h2>
+
+            {/* Lista de proyectos existentes */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-purple-300 mb-4">Proyectos Disponibles</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {projects.map((project) => (
+                  <div key={project.name} className={`bg-gradient-to-br to-black border rounded-xl p-4 flex items-center justify-between ${project.color} bg-opacity-20 border-purple-700/50`}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-4xl">{project.icon}</span>
+                      <span className="text-lg font-semibold text-purple-300">{project.name}</span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteProject(project.name)}
+                      className="p-2 bg-red-900/30 border border-red-700/50 rounded-lg hover:bg-red-900/50 transition-all text-red-400"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Formulario para agregar nuevo proyecto */}
+            <div className="border-t border-purple-800/50 pt-6">
+              <h3 className="text-lg font-semibold text-purple-300 mb-4">Agregar Nuevo Proyecto</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-purple-300 mb-2">Nombre del Proyecto</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: API REST, Aplicación Web..."
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-purple-300 mb-2">Emoji o Icono</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 🚀 (solo un carácter)"
+                    value={newProjectIcon}
+                    onChange={(e) => setNewProjectIcon(e.target.value)}
+                    maxLength={2}
+                    className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-purple-300 mb-2">Color Gradiente</label>
+                  <select
+                    value={newProjectColor}
+                    onChange={(e) => setNewProjectColor(e.target.value)}
+                    className="w-full px-4 py-3 bg-black/50 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all text-purple-300"
+                  >
+                    <option value="from-purple-600 to-pink-600">Púrpura a Rosa</option>
+                    <option value="from-purple-600 to-blue-600">Púrpura a Azul</option>
+                    <option value="from-purple-600 to-green-600">Púrpura a Verde</option>
+                    <option value="from-purple-600 to-orange-600">Púrpura a Naranja</option>
+                    <option value="from-blue-600 to-cyan-600">Azul a Cyan</option>
+                    <option value="from-green-600 to-emerald-600">Verde a Esmeralda</option>
+                    <option value="from-red-600 to-pink-600">Rojo a Rosa</option>
+                  </select>
+                </div>
+                <button
+                  onClick={handleAddProject}
+                  className="w-full px-8 py-3 bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg hover:from-purple-500 hover:to-purple-600 transition-all shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Agregar Proyecto
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
