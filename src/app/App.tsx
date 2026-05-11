@@ -47,7 +47,9 @@ interface Course {
   exercises: number;
   students: number;
   duration: string;
-  status: 'activo' | 'terminado';
+  totalSeconds: number;
+  activeSince: string | null;
+  status: 'pendiente' | 'en progreso' | 'terminado';
   color: string;
 }
 
@@ -120,13 +122,17 @@ export default function App() {
   ]);
 
   const [courses, setCourses] = useState<Course[]>([
-    { id: 1, name: "Fundamentos de Python", language: "Python", level: "Principiante", exercises: 25, students: 45, duration: "-", status: "activo", color: "green" },
-    { id: 2, name: "JavaScript Intermedio", language: "JavaScript", level: "Intermedio", exercises: 18, students: 32, duration: "-", status: "activo", color: "yellow" },
-    { id: 3, name: "Algoritmos Avanzados", language: "Python", level: "Avanzado", exercises: 15, students: 12, duration: "3h 45m", status: "terminado", color: "red" },
-    { id: 4, name: "Estructuras de Datos", language: "Python", level: "Intermedio", exercises: 22, students: 28, duration: "4h 10m", status: "terminado", color: "yellow" },
-    { id: 5, name: "POO en Java", language: "Java", level: "Avanzado", exercises: 20, students: 18, duration: "4h 30m", status: "terminado", color: "red" },
-    { id: 6, name: "Web con React", language: "JavaScript", level: "Intermedio", exercises: 30, students: 35, duration: "-", status: "activo", color: "yellow" },
+    { id: 1, name: "Fundamentos de Python", language: "Python", level: "Principiante", exercises: 25, students: 45, duration: "-", totalSeconds: 0, activeSince: null, status: "pendiente", color: "green" },
+    { id: 2, name: "JavaScript Intermedio", language: "JavaScript", level: "Intermedio", exercises: 18, students: 32, duration: "-", totalSeconds: 0, activeSince: null, status: "pendiente", color: "yellow" },
+    { id: 3, name: "Algoritmos Avanzados", language: "Python", level: "Avanzado", exercises: 15, students: 12, duration: "3h 45m", totalSeconds: 0, activeSince: null, status: "terminado", color: "red" },
+    { id: 4, name: "Estructuras de Datos", language: "Python", level: "Intermedio", exercises: 22, students: 28, duration: "4h 10m", totalSeconds: 0, activeSince: null, status: "terminado", color: "yellow" },
+    { id: 5, name: "POO en Java", language: "Java", level: "Avanzado", exercises: 20, students: 18, duration: "4h 30m", totalSeconds: 0, activeSince: null, status: "terminado", color: "red" },
+    { id: 6, name: "Web con React", language: "JavaScript", level: "Intermedio", exercises: 30, students: 35, duration: "-", totalSeconds: 0, activeSince: null, status: "pendiente", color: "yellow" },
   ]);
+
+  const [now, setNow] = useState(Date.now());
+
+  const activeCourse = courses.find(course => course.status === 'en progreso' && course.activeSince !== null);
 
   const [exercisesToDelete, setExercisesToDelete] = useState<Exercise[]>([
     { id: 1, name: "Bucle For antiguo (deprecated)", language: "Python", users: 5, reports: 8, status: "obsolete" },
@@ -284,11 +290,26 @@ export default function App() {
     if (savedProjects) {
       setProjects(JSON.parse(savedProjects));
     }
+
+    const savedCourses = localStorage.getItem('courses');
+    if (savedCourses) {
+      const parsedCourses = JSON.parse(savedCourses) as any[];
+      setCourses(parsedCourses.map(course => ({
+        ...course,
+        status: course.status === 'activo' ? 'pendiente' : course.status,
+        totalSeconds: typeof course.totalSeconds === 'number' ? course.totalSeconds : 0,
+        activeSince: course.activeSince ?? null,
+      })));
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('courses', JSON.stringify(courses));
+  }, [courses]);
 
   // Efecto del cronómetro de ejercicios (HU-15)
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isTimerRunning) {
       interval = setInterval(() => {
         setExerciseTimer(prev => prev + 1);
@@ -297,9 +318,8 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isTimerRunning]);
 
-  // Efecto del cronómetro de velocidad (HU-07)
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isSpeedTimerRunning) {
       interval = setInterval(() => {
         setSpeedTimer(prev => prev + 1);
@@ -307,6 +327,42 @@ export default function App() {
     }
     return () => clearInterval(interval);
   }, [isSpeedTimerRunning]);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (activeCourse) {
+      interval = setInterval(() => {
+        setNow(Date.now());
+      }, 1000);
+    }
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [activeCourse?.id]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && activeCourse) {
+        handlePauseCourse(activeCourse.id);
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (activeCourse) {
+        handlePauseCourse(activeCourse.id);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeCourse]);
 
   // Simular notificación de nuevo nivel (HU-14) - visual solamente
   const addLevelUpNotification = () => {
@@ -328,6 +384,93 @@ export default function App() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
+  };
+
+  const getCourseElapsedSeconds = (course: Course) => {
+    const baseSeconds = course.totalSeconds || 0;
+    if (!course.activeSince) {
+      return baseSeconds;
+    }
+    const elapsedSinceActive = Math.max(0, Math.floor((now - new Date(course.activeSince).getTime()) / 1000));
+    return baseSeconds + elapsedSinceActive;
+  };
+
+  const formatCourseTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0 && minutes > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    if (hours > 0) {
+      return `${hours}h`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m`;
+    }
+    return `${seconds}s`;
+  };
+
+  const handleStartCourse = (courseId: number) => {
+    setCourses(prev => prev.map(course => {
+      if (course.id === courseId) {
+        return {
+          ...course,
+          status: 'en progreso',
+          activeSince: course.activeSince || new Date().toISOString(),
+          totalSeconds: course.totalSeconds || 0,
+        };
+      }
+      if (course.status === 'en progreso' && course.activeSince && course.id !== courseId) {
+        const elapsed = Math.max(0, Math.floor((Date.now() - new Date(course.activeSince).getTime()) / 1000));
+        return {
+          ...course,
+          totalSeconds: (course.totalSeconds || 0) + elapsed,
+          activeSince: null,
+        };
+      }
+      return course;
+    }));
+  };
+
+  const handlePauseCourse = (courseId: number) => {
+    setCourses(prev => prev.map(course => {
+      if (course.id !== courseId || course.status !== 'en progreso') {
+        return course;
+      }
+      const elapsed = course.activeSince ? Math.max(0, Math.floor((Date.now() - new Date(course.activeSince).getTime()) / 1000)) : 0;
+      return {
+        ...course,
+        totalSeconds: (course.totalSeconds || 0) + elapsed,
+        activeSince: null,
+      };
+    }));
+  };
+
+  const handleFinishCourse = (courseId: number) => {
+    setCourses(prev => prev.map(course => {
+      if (course.id !== courseId) {
+        return course;
+      }
+      const elapsed = course.activeSince ? Math.max(0, Math.floor((Date.now() - new Date(course.activeSince).getTime()) / 1000)) : 0;
+      const total = (course.totalSeconds || 0) + elapsed;
+      return {
+        ...course,
+        totalSeconds: total,
+        activeSince: null,
+        status: 'terminado',
+        duration: formatCourseTime(total),
+      };
+    }));
+
+    const newNotification: Notification = {
+      id: Date.now(),
+      message: 'Curso completado con éxito',
+      type: 'success'
+    };
+    setNotifications(prev => [...prev, newNotification]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+    }, 5000);
   };
 
   // Funciones de autenticación
@@ -713,7 +856,9 @@ export default function App() {
       exercises: newCourseExercises,
       students: 0,
       duration: "-",
-      status: "activo",
+      totalSeconds: 0,
+      activeSince: null,
+      status: "pendiente",
       color: newCourseLevel === "Principiante" ? "green" : newCourseLevel === "Intermedio" ? "yellow" : "red"
     };
 
@@ -964,6 +1109,7 @@ export default function App() {
       setSpeedTimer(0);
     }, 1500);
   };
+
 
   const handleSubmitAIQuestion = () => {
     if (!aiQuestion.trim()) {
@@ -1418,6 +1564,7 @@ export default function App() {
               ) : (
                 <a href="#proyectos" className="hover:text-purple-400 transition-colors">Proyectos</a>
               )}
+              <a href="#cursos" className="hover:text-purple-400 transition-colors">Cursos</a>
               {!currentAdmin && (
                 <a href="#progreso" className="hover:text-purple-400 transition-colors">Progreso</a>
               )}
@@ -2581,7 +2728,40 @@ export default function App() {
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-400">Duración:</span>
-                      <span className="text-purple-300 font-semibold">{course.status === 'terminado' ? course.duration : 'En progreso'}</span>
+                      <span className="text-purple-300 font-semibold">{course.status === 'terminado' ? course.duration : formatCourseTime(getCourseElapsedSeconds(course))}</span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${course.status === 'terminado' ? 'bg-green-900/40 text-green-300' : course.status === 'en progreso' ? 'bg-yellow-900/40 text-yellow-300' : 'bg-blue-900/40 text-blue-300'}`}>
+                        {course.status === 'terminado' ? 'Terminado' : course.status === 'en progreso' ? 'En progreso' : 'Pendiente'}
+                      </span>
+                      {course.status !== 'terminado' && (
+                        <div className="flex gap-2">
+                          {(course.status === 'pendiente' || (course.status === 'en progreso' && !course.activeSince)) && (
+                            <button
+                              onClick={() => handleStartCourse(course.id)}
+                              className="px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 rounded-lg hover:from-green-500 hover:to-green-600 transition-all shadow-lg shadow-green-500/30 text-white text-xs font-semibold"
+                            >
+                              {course.status === 'pendiente' ? 'Empezar curso' : 'Continuar curso'}
+                            </button>
+                          )}
+                          {course.status === 'en progreso' && course.activeSince && (
+                            <>
+                              <button
+                                onClick={() => handlePauseCourse(course.id)}
+                                className="px-3 py-2 bg-gradient-to-r from-yellow-600 to-yellow-700 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all shadow-lg shadow-yellow-500/30 text-white text-xs font-semibold"
+                              >
+                                Pausar curso
+                              </button>
+                              <button
+                                onClick={() => handleFinishCourse(course.id)}
+                                className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg shadow-blue-500/30 text-white text-xs font-semibold"
+                              >
+                                Finalizar curso
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -3918,11 +4098,153 @@ export default function App() {
           </div>
         </section>
 
-        {/* Sección: Práctica de Velocidad (HU-07) */}
+        {/* Sección: Editor de Reintento de Ejercicios Fallidos */}
+        {retryExerciseName && (
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold text-purple-400">
+              Reintentando: {retryExerciseName}
+            </h2>
+            
+            <div className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-8 shadow-2xl shadow-purple-900/20">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-gray-400 text-sm">Ejercicio:</span>
+                    <span className="text-purple-400 font-semibold">{retryExerciseName}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-400 text-sm">Estado:</span>
+                    <span className="text-red-400 font-semibold flex items-center gap-1">
+                      <span className="w-2 h-2 bg-red-400 rounded-full"></span>
+                      Reintentando
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setRetryExerciseName(null);
+                    setRetryExerciseCode("");
+                  }}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Cerrar editor
+                </button>
+              </div>
+
+              <div className="bg-gradient-to-br from-red-950/30 to-purple-950/30 border border-red-800/50 rounded-xl p-4 mb-6">
+                <p className="text-red-300 text-sm"><span className="font-semibold">⚠ Ejercicio fallido:</span> Intenta resolver este ejercicio nuevamente. Recuerda los errores anteriores y aplica la retroalimentación que recibiste.</p>
+              </div>
+
+              <div className="bg-black/80 rounded-xl p-6 border border-purple-900/50 mb-6">
+                <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Tu solución (Python)
+                </p>
+                <textarea
+                  value={retryExerciseCode}
+                  onChange={(e) => setRetryExerciseCode(e.target.value)}
+                  placeholder={`# Escribe tu solución mejorada para ${retryExerciseName}\n# Recuerda los errores anteriores\n# Prueba con casos de prueba diferentes\n\n`}
+                  className="w-full h-80 bg-black/50 text-purple-300 border border-purple-900/50 rounded-lg p-4 font-mono text-sm focus:outline-none focus:border-purple-600 resize-none placeholder-gray-600"
+                />
+              </div>
+
+              <div className="flex gap-4 mb-6">
+                <button
+                  onClick={() => {
+                    if (retryExerciseCode.trim() === "") {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `⚠ Por favor escribe el código de tu solución`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    } else {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `✓ Solución guardada para ${retryExerciseName}`,
+                        type: 'success'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    }
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white rounded-lg transition-all shadow-lg shadow-green-500/50 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Save className="w-5 h-5" />
+                  Guardar solución
+                </button>
+                <button
+                  onClick={() => {
+                    if (retryExerciseCode.trim() === "") {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `⚠ Por favor escribe código antes de ejecutar`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 5000);
+                    } else {
+                      const newNotification: Notification = {
+                        id: Date.now(),
+                        message: `▶ Ejecutando y validando solución...`,
+                        type: 'info'
+                      };
+                      setNotifications(prev => [...prev, newNotification]);
+                      setTimeout(() => {
+                        setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
+                      }, 3000);
+                      
+                      setTimeout(() => {
+                        const successNotification: Notification = {
+                          id: Date.now(),
+                          message: `✓ ¡Excelente! Has resuelto correctamente ${retryExerciseName}. Ejercicio aprobado!`,
+                          type: 'success'
+                        };
+                        setNotifications(prev => [...prev, successNotification]);
+                        setTimeout(() => {
+                          setNotifications(prev => prev.filter(n => n.id !== successNotification.id));
+                        }, 5000);
+                      }, 3000);
+                    }
+                  }}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-lg transition-all shadow-lg shadow-purple-500/50 font-semibold flex items-center justify-center gap-2"
+                >
+                  <Play className="w-5 h-5" />
+                  Ejecutar y validar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Caracteres:</p>
+                  <p className="text-2xl font-bold text-purple-300">{retryExerciseCode.length}</p>
+                </div>
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Líneas:</p>
+                  <p className="text-2xl font-bold text-purple-300">{retryExerciseCode.split('\n').length}</p>
+                </div>
+                <div className="bg-black/50 rounded-xl p-4 border border-purple-900/50">
+                  <p className="text-gray-400 text-sm mb-2">Palabras clave:</p>
+                  <p className="text-2xl font-bold text-purple-300">{(retryExerciseCode.match(/\bfor\b|\bwhile\b|\bif\b|\belse\b|\ndef\b/gi) || []).length}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Sección: Asistente de IA (HU-08) */}
         <section className="space-y-6">
           <div className="flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 text-cyan-500" />
-            <h2 className="text-3xl font-bold text-purple-400">Práctica de Velocidad</h2>
+            <Lightbulb className="w-8 h-8 text-yellow-500" />
+            <h2 className="text-3xl font-bold text-purple-400">Asistente de IA</h2>
           </div>
 
           <div className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-6 shadow-2xl shadow-purple-900/20">
@@ -3957,11 +4279,6 @@ export default function App() {
 
         {/* Sección: Asistente de IA (HU-08) */}
         <section className="space-y-6">
-          <div className="flex items-center gap-3">
-            <Lightbulb className="w-8 h-8 text-yellow-500" />
-            <h2 className="text-3xl font-bold text-purple-400">Asistente de IA</h2>
-          </div>
-
           <div className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-6 shadow-2xl shadow-purple-900/20">
             <p className="text-purple-200 mb-6">
               ¿Tienes dudas sobre programación? Nuestro asistente de IA está aquí para ayudarte
@@ -4047,6 +4364,104 @@ export default function App() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="space-y-6">
+          <div className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-6 shadow-2xl shadow-purple-900/20">
+            <div className="mb-4 p-4 bg-purple-900/30 rounded-lg border border-purple-700/50">
+              <p className="text-purple-200">Corrige el error de sintaxis:</p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm text-purple-300 mb-2">Escribe tu código aquí:</label>
+              <textarea
+                value={currentExerciseCode}
+                onChange={(e) => setCurrentExerciseCode(e.target.value)}
+                placeholder="for i in range(5)&#10;    print(i)"
+                className="w-full h-32 px-4 py-3 bg-black/80 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all font-mono text-sm text-purple-300"
+              />
+            </div>
+            
+            <div className="flex gap-4 flex-wrap">
+              <button
+                onClick={handleVerifyCode}
+                disabled={verifyingCode || codeVerified}
+                className={`px-8 py-3 bg-gradient-to-r rounded-lg transition-all shadow-lg ${
+                  codeVerified
+                    ? 'from-green-600 to-green-700 shadow-green-500/50'
+                    : verifyingCode
+                    ? 'from-yellow-600 to-yellow-700 shadow-yellow-500/50 animate-pulse'
+                    : 'from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 shadow-purple-500/50 hover:shadow-purple-500/70'
+                }`}
+              >
+                {codeVerified ? '✓ Verificado' : verifyingCode ? 'Verificando...' : 'Verificar sintaxis'}
+              </button>
+
+              {/* Botón Ver Solución (HU-13) */}
+              <button
+                onClick={() => setShowSolution(!showSolution)}
+                className="px-8 py-3 border border-purple-600 rounded-lg hover:bg-purple-900/30 transition-all"
+              >
+                {showSolution ? 'Ocultar solución' : 'Ver solución'}
+              </button>
+
+              {/* Botón Ver Teoría (HU-22) */}
+              <button
+                onClick={() => setShowTheoryModal(true)}
+                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg shadow-blue-500/50"
+              >
+                <FileText className="w-5 h-5" />
+                Ver teoría
+              </button>
+
+              {/* Botón Mejorar Código (HU-25) */}
+              <button
+                onClick={() => setShowCodeImprovementModal(true)}
+                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-yellow-600 to-yellow-700 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all shadow-lg shadow-yellow-500/50"
+              >
+                <Lightbulb className="w-5 h-5" />
+                Mejorar código
+              </button>
+            </div>
+            
+            {/* Panel de Solución */}
+            {showSolution && (
+              <div className="mt-6 bg-gradient-to-br from-green-950/50 to-black border border-green-800/50 rounded-xl p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-green-400 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5" />
+                  Solución correcta
+                </h3>
+                
+                <div className="bg-black/80 rounded-xl p-6 border border-green-900/50 font-mono text-sm">
+                  <div className="flex gap-4">
+                    <div className="text-gray-600">
+                      <div>1</div>
+                      <div>2</div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-green-400">for i in range(5):</div>
+                      <div className="text-purple-300">    print(i)</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-green-900/20 border border-green-700/50 rounded-lg p-4">
+                  <p className="text-green-300 font-semibold mb-2">Explicación:</p>
+                  <p className="text-green-200 text-sm">
+                    En Python, los bucles for deben terminar con dos puntos (:) para indicar el inicio del bloque de código.
+                  </p>
+                </div>
+                
+                <div className="bg-green-900/20 border border-green-700/50 rounded-lg p-4">
+                  <p className="text-green-300 font-semibold mb-2">Posibles variantes:</p>
+                  <div className="bg-black/50 rounded-lg p-3 font-mono text-sm">
+                    <div className="text-green-400">for i in range(0, 5):</div>
+                    <div className="text-purple-300 ml-4">print(i)</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -4193,7 +4608,7 @@ export default function App() {
           </section>
         )}
 
-        {/* Sección: Editor de Reintento de Ejercicios Fallidos */}
+        {/* Sección: Asistente de IA (HU-08) */}
         {retryExerciseName && (
           <section className="space-y-6">
             <h2 className="text-3xl font-bold text-purple-400">
@@ -4334,157 +4749,6 @@ export default function App() {
             </div>
           </section>
         )}
-
-        {/* Section 1: Ejercicios de Sintaxis (HU-01) */}
-        <section id="ejercicios" className="space-y-6">
-          <h2 className="text-3xl font-bold text-purple-400">Ejercicios de Sintaxis</h2>
-
-          <div className="bg-gradient-to-br from-purple-950/50 to-black border border-purple-800/50 rounded-2xl p-6 shadow-2xl shadow-purple-900/20">
-            {/* Cronómetro de ejercicio (HU-15) */}
-            <div className="mb-6 bg-black/50 border border-purple-800/50 rounded-xl p-4">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                  <Timer className="w-6 h-6 text-purple-400" />
-                  <div>
-                    <p className="text-sm text-gray-400">Duración del ejercicio</p>
-                    <p className="text-2xl font-bold text-purple-300 font-mono">{formatTime(exerciseTimer)}</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  {!isTimerRunning ? (
-                    <button
-                      onClick={() => setIsTimerRunning(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 rounded-lg hover:from-green-500 hover:to-green-600 transition-all shadow-lg shadow-green-500/50 text-sm"
-                    >
-                      <Play className="w-4 h-4" />
-                      Iniciar
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setIsTimerRunning(false)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-700 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all shadow-lg shadow-yellow-500/50 text-sm"
-                    >
-                      Pausar
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setExerciseTimer(0);
-                      setIsTimerRunning(false);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 rounded-lg hover:from-red-500 hover:to-red-600 transition-all shadow-lg shadow-red-500/50 text-sm"
-                  >
-                    Reiniciar
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-4 p-4 bg-purple-900/30 rounded-lg border border-purple-700/50">
-              <p className="text-purple-200">Corrige el error de sintaxis:</p>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm text-purple-300 mb-2">Escribe tu código aquí:</label>
-              <textarea
-                value={currentExerciseCode}
-                onChange={(e) => setCurrentExerciseCode(e.target.value)}
-                placeholder="for i in range(5)&#10;    print(i)"
-                className="w-full h-32 px-4 py-3 bg-black/80 border border-purple-800/50 rounded-lg focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-600/50 transition-all font-mono text-sm text-purple-300"
-              />
-            </div>
-            
-            <div className="flex gap-4 flex-wrap">
-              <button
-                onClick={handleVerifyCode}
-                disabled={verifyingCode || codeVerified}
-                className={`px-8 py-3 bg-gradient-to-r rounded-lg transition-all shadow-lg ${
-                  codeVerified
-                    ? 'from-green-600 to-green-700 shadow-green-500/50'
-                    : verifyingCode
-                    ? 'from-yellow-600 to-yellow-700 shadow-yellow-500/50 animate-pulse'
-                    : 'from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 shadow-purple-500/50 hover:shadow-purple-500/70'
-                }`}
-              >
-                {codeVerified ? '✓ Verificado' : verifyingCode ? 'Verificando...' : 'Verificar sintaxis'}
-              </button>
-
-              {/* Botón Ver Solución (HU-13) */}
-              <button
-                onClick={() => setShowSolution(!showSolution)}
-                className="px-8 py-3 border border-purple-600 rounded-lg hover:bg-purple-900/30 transition-all"
-              >
-                {showSolution ? 'Ocultar solución' : 'Ver solución'}
-              </button>
-
-              {/* Botón Ver Teoría (HU-22) */}
-              <button
-                onClick={() => setShowTheoryModal(true)}
-                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg shadow-blue-500/50"
-              >
-                <FileText className="w-5 h-5" />
-                Ver teoría
-              </button>
-
-              {/* Botón Mejorar Código (HU-25) */}
-              <button
-                onClick={() => setShowCodeImprovementModal(true)}
-                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-yellow-600 to-yellow-700 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all shadow-lg shadow-yellow-500/50"
-              >
-                <Lightbulb className="w-5 h-5" />
-                Mejorar código
-              </button>
-
-              {/* Botón Pausar (HU-28) */}
-              <button
-                onClick={handlePauseExercise}
-                className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-600 to-orange-700 rounded-lg hover:from-orange-500 hover:to-orange-600 transition-all shadow-lg shadow-orange-500/50"
-              >
-                <Clock className="w-5 h-5" />
-                Pausar
-              </button>
-            </div>
-            
-            {/* Panel de Solución */}
-            {showSolution && (
-              <div className="mt-6 bg-gradient-to-br from-green-950/50 to-black border border-green-800/50 rounded-xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-green-400 flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5" />
-                  Solución correcta
-                </h3>
-                
-                <div className="bg-black/80 rounded-xl p-6 border border-green-900/50 font-mono text-sm">
-                  <div className="flex gap-4">
-                    <div className="text-gray-600">
-                      <div>1</div>
-                      <div>2</div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-green-400">for i in range(5):</div>
-                      <div className="text-purple-300">    print(i)</div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-green-900/20 border border-green-700/50 rounded-lg p-4">
-                  <p className="text-green-300 font-semibold mb-2">Explicación:</p>
-                  <p className="text-green-200 text-sm">
-                    En Python, los bucles for deben terminar con dos puntos (:) para indicar el inicio del bloque de código.
-                  </p>
-                </div>
-                
-                <div className="bg-green-900/20 border border-green-700/50 rounded-lg p-4">
-                  <p className="text-green-300 font-semibold mb-2">Posibles variantes:</p>
-                  <div className="bg-black/50 rounded-lg p-3 font-mono text-sm">
-                    <div className="text-green-400">for i in range(0, 5):</div>
-                    <div className="text-purple-300 ml-4">print(i)</div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
 
         {/* Section 2: Detector automático de errores (HU-02) */}
         <section className="space-y-6">
@@ -4837,6 +5101,72 @@ export default function App() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </section>
+
+        <section id="cursos" className="space-y-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <Package className="w-8 h-8 text-purple-400" />
+              <h2 className="text-3xl font-bold text-white">Mi ruta de aprendizaje</h2>
+            </div>
+            <p className="max-w-2xl text-gray-400">Descubre tu progreso, retoma cursos justo donde los dejaste y mira cuánto tiempo llevas invertido en cada uno.</p>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {courses.map((course) => {
+              const elapsed = getCourseElapsedSeconds(course);
+              const progress = course.status === 'terminado' ? 100 : course.status === 'en progreso' ? 68 : 16;
+
+              return (
+                <div key={course.id} className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 shadow-2xl shadow-purple-900/20">
+                  <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-fuchsia-500 via-cyan-500 to-emerald-500 opacity-90" />
+                  <div className="relative space-y-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-fuchsia-400">Curso</p>
+                        <h3 className="mt-2 text-2xl font-semibold text-white">{course.name}</h3>
+                        <p className="mt-1 text-sm text-gray-400">{course.language} · Nivel {course.level}</p>
+                      </div>
+                      <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${course.status === 'terminado' ? 'bg-emerald-500/15 text-emerald-300' : course.status === 'en progreso' ? 'bg-amber-500/15 text-amber-300' : 'bg-sky-500/15 text-sky-300'}`}>
+                        {course.status === 'terminado' ? 'Completado' : course.status === 'en progreso' ? 'En progreso' : 'Pendiente'}
+                      </span>
+                    </div>
+
+                    <div className="rounded-[1.5rem] bg-white/5 p-4 ring-1 ring-white/10">
+                      <div className="flex items-center justify-between text-sm text-gray-400 mb-3">
+                        <span>Tiempo invertido</span>
+                        <span className="text-white font-semibold">{formatCourseTime(elapsed)}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-cyan-500 transition-all" style={{ width: `${progress}%` }} />
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+                        <span>{progress}% progreso</span>
+                        <span>{course.exercises} ejercicios</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleStartCourse(course.id)}
+                      disabled={course.status === 'terminado'}
+                      className={`w-full rounded-[1.5rem] px-5 py-3 text-sm font-semibold text-white transition ${course.status === 'terminado' ? 'cursor-not-allowed bg-white/10 opacity-60' : 'bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 shadow-lg shadow-fuchsia-500/20'}`}
+                    >
+                      {course.status === 'terminado' ? 'Curso completado' : course.status === 'pendiente' ? 'Comenzar curso' : 'Seguir aprendiendo'}
+                    </button>
+
+                    {course.status === 'en progreso' && (
+                      <button
+                        onClick={() => handleFinishCourse(course.id)}
+                        className="w-full rounded-[1.5rem] border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/10"
+                      >
+                        Marcar como completado
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
